@@ -1,1 +1,84 @@
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.util.*;
 
+public class Analysis {
+    public static void main(String[] args) {
+        Scanner scnr = new Scanner(System.in);
+        System.out.print("Enter a filename: ");
+        String filename = scnr.nextLine();
+
+        ArrayList<Book> books = new ArrayList<>();
+        try {
+            Scanner fileScanner = new Scanner(new File(filename));
+            fileScanner.nextLine(); // 跳过表头
+
+            while (fileScanner.hasNextLine()) {
+                String[] parts = fileScanner.nextLine().split(",");
+                try {
+                    double rating = Double.parseDouble(parts[2]); // 第3列是User Rating
+                    books.add(new Book(rating));
+                } catch (NumberFormatException | ArrayIndexOutOfBoundsException e) {
+                    // 忽略格式错误行
+                }
+            }
+
+            generateHistogram(books);
+
+        } catch (FileNotFoundException e) {
+            System.out.println("ERROR - File " + filename + " not found");
+        }
+    }
+
+    public static void generateHistogram(ArrayList<Book> books) {
+        if (books.isEmpty()) return;
+
+        ArrayList<Double> ratings = new ArrayList<>();
+        for (Book b : books) {
+            ratings.add(b.getRating());
+        }
+
+        double min = Collections.min(ratings);
+        double max = Collections.max(ratings);
+
+        TreeMap<Double, Integer> histogram = new TreeMap<>();
+        for (double r = min; r <= max + 0.001; r += 0.1) {
+            histogram.put(Math.round(r * 10.0) / 10.0, 0);
+        }
+
+        for (double r : ratings) {
+            double key = Math.round(r * 10.0) / 10.0;
+            histogram.put(key, histogram.getOrDefault(key, 0) + 1);
+        }
+
+        System.out.println("Histogram of Amazon Bestseller Ratings");
+        System.out.println("--------------------------------------");
+        for (Map.Entry<Double, Integer> entry : histogram.entrySet()) {
+            System.out.printf("%.1f ", entry.getKey());
+            for (int i = 0; i < entry.getValue(); i++) System.out.print("*");
+            System.out.println();
+        }
+        System.out.println("--------------------------------------");
+
+        // 统计值计算
+        int count = ratings.size();
+        Collections.sort(ratings);
+        double median = count % 2 == 1 ? ratings.get(count / 2)
+            : (ratings.get(count / 2 - 1) + ratings.get(count / 2)) / 2.0;
+
+        double sum = 0;
+        for (double r : ratings) sum += r;
+        double average = sum / count;
+
+        double sqSum = 0;
+        for (double r : ratings) {
+            sqSum += (r - average) * (r - average);
+        }
+        double stdDev = Math.sqrt(sqSum / count);
+
+        System.out.println("Total books rated: " + count);
+        System.out.printf("Median score: %.1f\n", median);
+        System.out.printf("Average score: %.1f\n", average);
+        System.out.printf("Standard Deviation: %.2f\n", stdDev);
+    }
+}
